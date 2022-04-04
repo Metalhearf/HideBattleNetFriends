@@ -1,0 +1,6 @@
+## Interface: 90200
+## Title: HideBattleNetFriends
+## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
+## Author: Metalhearf
+## Version: 1.0.0
+HideBattleNetFriends.lua
