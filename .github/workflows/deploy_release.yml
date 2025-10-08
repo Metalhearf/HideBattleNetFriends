@@ -1,0 +1,23 @@
+name: Package and build release versions
+
+on:
+  push:
+    tags:
+      - "*.*.*"
+      - "v*.*.*"
+      - "!v*.*.*-*"
+      - "!*.*.*-*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      CF_API_KEY: ${{ secrets.CF_API_KEY }}
+    steps:
+      - name: Clone project
+        uses: actions/checkout@v2
+
+      - name: Package and release
+        uses: BigWigsMods/packager@v2
+        with:
+          args: -S -p 490332
