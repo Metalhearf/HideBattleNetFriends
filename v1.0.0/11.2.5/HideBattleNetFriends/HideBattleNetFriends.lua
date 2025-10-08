@@ -1,3 +1,4 @@
+local OldBNGetNumFriends = BNGetNumFriends
 BNGetNumFriends = function(...)
-	return 0, 0;
+	return 0, 0, 0, 0
 end
