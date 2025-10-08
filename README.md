@@ -1,3 +1,5 @@
+<img src="Screenshots/logo400.png" alt="Logo" width="300"/>
+
 # Hide Battle.net Friends
 
 *HideBattleNetFriends* is a lightweight *World of Warcraft* addon that hides *Battle.net* (Real ID and BattleTag) friends from your in-game friends list. Only your character-specific WoW friends will be visible, just like in the classic days!
