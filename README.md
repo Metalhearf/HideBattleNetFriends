@@ -1,12 +1,28 @@
-For better customization, you may want to check [this version](https://www.curseforge.com/wow/addons/hide-battle-net).
+# Hide Battle.net Friends
 
-# TL;DR
-This addon hides Battle.net (Real ID and BattleTag) friends from the in-game friends list.
+*HideBattleNetFriends* is a lightweight *World of Warcraft* addon that hides *Battle.net* (Real ID and BattleTag) friends from your in-game friends list. Only your character-specific WoW friends will be visible, just like in the classic days!
 
-# Description
-Useful for streamers or content creators that don't want to remove the "Real ID" option from their account when sharing moments of the game, while also protecting their friend's privacy.
-Plus, it also it declutters the in-game friend list "just like the good old days".
+## Features
 
-### Considerations:
-- This addon does not interfere with the Battle.net app : it just hides your friends from the WoW in-game friends list. As such, it will only show people you have friended per character.
-- Your friends can still see you online, you can still receive whispers from them in game, you can still reply to those whispers, and you can still add and accept Battle.net friend requests.
+- **Privacy for streamers & creators:** Prevents accidental display of BattleTag/Real ID info on stream or screenshots.
+- **Decluttered friends list:** See only your WoW friends from the same server and faction.
+- **Non-intrusive:** Does not affect the Battle.net app or your ability to chat/whisper Battle.net friends.
+
+## How it works
+
+- The addon hides Battle.net friends in the WoW friends UI. You can still receive and reply to whispers, and send/accept Battle.net friend requests.
+- No data is deleted or modified, only the display is changed for your own client.
+
+## Alternatives
+
+For advanced customization and more options, you can check out [Hide Battle.net Stuff](https://www.curseforge.com/wow/addons/hide-battle-net).
+
+## Changelog
+
+### 1.1.1
+
+- Multiversion support. Same codebase works for both Retail, Classic WoW and current Classic.
+
+### 1.0.0
+
+- Initial release.
