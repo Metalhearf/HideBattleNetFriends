@@ -1,6 +1,6 @@
-## Interface: 110207, 50501, 11507
+## Interface: 110207, 50503, 11508
 ## Title: HideBattleNetFriends
 ## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
 ## Author: Metalhearf
-## Version: 1.1.0
+## Version: 1.1.1
 HideBattleNetFriends.lua
