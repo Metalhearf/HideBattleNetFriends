@@ -1,4 +1,4 @@
-## Interface: 120000, 50503, 11508
+## Interface: 120000, 50503, 11508, 20505
 ## Title: HideBattleNetFriends
 ## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
 ## Author: Metalhearf

@@ -14,17 +14,3 @@
 
 - The addon hides Battle.net friends in the WoW friends UI. You can still receive and reply to whispers, and send/accept Battle.net friend requests.
 - No data is deleted or modified, only the display is changed for your own client.
-
-## Alternatives
-
-For advanced customization and more options, you can check out [Hide Battle.net Stuff](https://www.curseforge.com/wow/addons/hide-battle-net).
-
-## Changelog
-
-### 1.1.1
-
-- Multiversion support. Same codebase works for both Retail, Classic WoW and current Classic.
-
-### 1.0.0
-
-- Initial release.
