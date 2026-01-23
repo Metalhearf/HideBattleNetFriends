@@ -1,6 +1,23 @@
-## Interface: 110207, 50503, 11508
+## Interface: 120000, 50503, 11508
 ## Title: HideBattleNetFriends
 ## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
 ## Author: Metalhearf
-## Version: 1.1.1
+## Version: 1.2.0
+
+## IconTexture: Interface\AddOns\HideBattleNetFriends\Logo\HideBattleNetFriends64
+
+## Category: User Interface
+## Category-deDE: Benutzerinterface
+## Category-esES: Interfaz de usuario
+## Category-esMX: Interfaz de usuario
+## Category-frFR: Interface utilisateur
+## Category-itIT: Interfaccia utente
+## Category-koKR: 사용자 인터페이스
+## Category-ptBR: Interface do usuário
+## Category-ruRU: Интерфейс пользователя
+## Category-zhCN: 用户界面
+## Category-zhTW: 使用者介面
+
+## X-Curse-Project-ID: 490332
+
 HideBattleNetFriends.lua
