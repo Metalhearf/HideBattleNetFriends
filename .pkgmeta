@@ -1,0 +1,7 @@
+package-as: HideBattleNetFriends
+
+ignore:
+  - Screenshots
+  - _tools
+  - README.md
+  - .github
