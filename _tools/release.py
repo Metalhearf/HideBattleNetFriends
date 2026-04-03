@@ -14,8 +14,8 @@ from bs4 import BeautifulSoup
 
 WIKI_URL = "https://warcraft.wiki.gg/wiki/Public_client_builds"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-ADDON_DIR = PROJECT_ROOT / "HideBattleNetFriends"
 ADDON_NAME = "HideBattleNetFriends"
+ADDON_DIR = PROJECT_ROOT / ADDON_NAME
 
 # Each server type maps to a TOC file suffix (None = main .toc)
 SERVER_TYPES = [

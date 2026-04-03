@@ -1,7 +1,12 @@
 package-as: HideBattleNetFriends
 
+move-folders:
+  HideBattleNetFriends/HideBattleNetFriends: HideBattleNetFriends
+
 ignore:
   - Screenshots
   - _tools
   - README.md
   - .github
+  - LICENSE
+  - Details
