@@ -101,6 +101,7 @@ def fetch_versions() -> dict[str, dict]:
 def read_current_interfaces() -> tuple[dict[str, str], str]:
     """Read current interface from each TOC file.
     Returns ({server_key: interface}, addon_version).
+    The addon version is taken from the retail TOC (canonical source).
     """
     interfaces = {}
     version = "1.0.0"
@@ -112,7 +113,7 @@ def read_current_interfaces() -> tuple[dict[str, str], str]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.startswith("## Interface:"):
                 interfaces[stype["key"]] = line.split(":", 1)[1].strip()
-            elif line.startswith("## Version:"):
+            elif line.startswith("## Version:") and stype["key"] == "retail":
                 version = line.split(":", 1)[1].strip()
 
     return interfaces, version
@@ -125,13 +126,13 @@ def bump_patch(version: str) -> str:
     return ".".join(parts)
 
 
-def update_toc(path: Path, interface: str, version: str):
-    """Update a single TOC file with new interface and version."""
+def update_toc(path: Path, interface: str | None, version: str):
+    """Update a single TOC file with a new version; rewrite interface only if provided."""
     content = path.read_text(encoding="utf-8")
     lines = content.splitlines()
     new_lines = []
     for line in lines:
-        if line.startswith("## Interface:"):
+        if line.startswith("## Interface:") and interface is not None:
             new_lines.append(f"## Interface: {interface}")
         elif line.startswith("## Version:"):
             new_lines.append(f"## Version: {version}")
@@ -180,16 +181,16 @@ def run(apply: bool = False):
         print(f"\n{len(changes)} change(s) detected. Use --apply to write.")
         return
 
-    # Apply
+    # Apply: bump version on every existing TOC, update interface only where the wiki gave us one
     new_version = bump_patch(addon_version)
     for stype in SERVER_TYPES:
-        key = stype["key"]
-        if key not in web:
-            continue
         path = toc_path(stype["suffix"])
-        if path.exists():
-            update_toc(path, web[key]["interface_numeric"], new_version)
-            print(f"  Updated {path.name}: {web[key]['interface_numeric']}")
+        if not path.exists():
+            continue
+        new_iface = web[stype["key"]]["interface_numeric"] if stype["key"] in web else None
+        update_toc(path, new_iface, new_version)
+        iface_note = new_iface if new_iface is not None else "unchanged"
+        print(f"  Updated {path.name}: interface={iface_note}, version={new_version}")
 
     print(f"\nVersion bumped: v{addon_version} -> v{new_version}")
     build_zip(new_version)
