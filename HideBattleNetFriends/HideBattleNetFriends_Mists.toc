@@ -1,8 +1,8 @@
-## Interface: 50503
+## Interface: 50504
 ## Title: HideBattleNetFriends
 ## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
 ## Author: Metalhearf
-## Version: 1.2.2
+## Version: 1.2.3
 
 ## IconTexture: Interface\AddOns\HideBattleNetFriends\Logo\HideBattleNetFriends64
 
