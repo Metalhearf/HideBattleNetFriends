@@ -17,12 +17,18 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 ADDON_NAME = "HideBattleNetFriends"
 ADDON_DIR = PROJECT_ROOT / ADDON_NAME
 
-# Each server type maps to a TOC file suffix (None = main .toc)
+# Each server type maps to a TOC file suffix (None = main .toc).
+# "match" receives the lowercased Server and Expansion columns of the wiki table.
+# "prerelease" lets a type match a row SKIP_KEYWORDS would otherwise drop, for a
+# client that only exists as a test/beta cluster so far.
 SERVER_TYPES = [
-    {"key": "retail",       "suffix": None,      "match": lambda s: "retail" in s and "ptr" not in s},
-    {"key": "classic",      "suffix": "Mists",   "match": lambda s: "classic" in s and "era" not in s and "ptr" not in s},
-    {"key": "classic_era",  "suffix": "Classic",  "match": lambda s: "classic era" in s and "anniversary" not in s and "ptr" not in s},
-    {"key": "classic_anniversary", "suffix": "TBC", "match": lambda s: "classic era" in s and "anniversary" in s and "ptr" not in s},
+    {"key": "retail",       "suffix": None,      "match": lambda s, e: "retail" in s and "ptr" not in s},
+    {"key": "classic",      "suffix": "Mists",   "match": lambda s, e: "classic" in s and "era" not in s and "ptr" not in s and "forever" not in e},
+    {"key": "classic_era",  "suffix": "Classic",  "match": lambda s, e: "classic era" in s and "anniversary" not in s and "ptr" not in s},
+    {"key": "classic_anniversary", "suffix": "TBC", "match": lambda s, e: "classic era" in s and "anniversary" in s and "ptr" not in s},
+    # Until it releases on 2026-11-04, Forever (codename Camelot) only runs on the
+    # Classic Beta cluster, so it is matched on its expansion, not its server name.
+    {"key": "forever",      "suffix": "Camelot", "match": lambda s, e: "forever" in e, "prerelease": True},
 ]
 
 SKIP_KEYWORDS = {"alpha", "beta", "test"}
@@ -81,9 +87,12 @@ def fetch_versions() -> dict[str, dict]:
     for stype in SERVER_TYPES:
         for row in rows:
             name_lower = row["server"].lower()
-            if any(kw in name_lower for kw in SKIP_KEYWORDS):
+            expansion_lower = row["version"].lower()
+            if not stype["match"](name_lower, expansion_lower):
                 continue
-            if stype["match"](name_lower) and stype["key"] not in result:
+            if any(kw in name_lower for kw in SKIP_KEYWORDS) and not stype.get("prerelease"):
+                continue
+            if stype["key"] not in result:
                 result[stype["key"]] = row
                 break
 

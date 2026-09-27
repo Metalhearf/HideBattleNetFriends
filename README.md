@@ -31,6 +31,7 @@ Nothing is deleted or modified server-side. You can still:
 | Classic (Cataclysm / MoP) | Yes |
 | Classic Era | Yes |
 | Anniversary Edition | Yes |
+| Forever | Yes |
 
 Interface versions are automatically kept up to date via CI.
 
