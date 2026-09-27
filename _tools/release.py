@@ -23,9 +23,12 @@ ADDON_DIR = PROJECT_ROOT / ADDON_NAME
 # client that only exists as a test/beta cluster so far.
 SERVER_TYPES = [
     {"key": "retail",       "suffix": None,      "match": lambda s, e: "retail" in s and "ptr" not in s},
-    {"key": "classic",      "suffix": "Mists",   "match": lambda s, e: "classic" in s and "era" not in s and "ptr" not in s and "forever" not in e},
+    {"key": "classic",      "suffix": "Mists",   "match": lambda s, e: "classic" in s and "era" not in s and "anniversary" not in s and "ptr" not in s and "forever" not in e},
     {"key": "classic_era",  "suffix": "Classic",  "match": lambda s, e: "classic era" in s and "anniversary" not in s and "ptr" not in s},
-    {"key": "classic_anniversary", "suffix": "TBC", "match": lambda s, e: "classic era" in s and "anniversary" in s and "ptr" not in s},
+    # The wiki names this row "Classic Anniversary", not "Classic Era / Anniversary":
+    # matching on "classic era" never fired. "era" still excludes the
+    # "Classic Era / Anniversary Edition PTR" row, which "ptr" also covers.
+    {"key": "classic_anniversary", "suffix": "TBC", "match": lambda s, e: "anniversary" in s and "era" not in s and "ptr" not in s},
     # Until it releases on 2026-11-04, Forever (codename Camelot) only runs on the
     # Classic Beta cluster, so it is matched on its expansion, not its server name.
     {"key": "forever",      "suffix": "Camelot", "match": lambda s, e: "forever" in e, "prerelease": True},
@@ -100,19 +103,26 @@ def fetch_versions() -> dict[str, dict]:
         raw = info["interface"]
         info["interface_numeric"] = version_to_interface(raw) if "." in raw else raw
 
-    print(f"Found {len(result)} server versions:")
-    for key, info in result.items():
-        print(f"  {key}: {info['version']} (interface {info['interface_numeric']})")
+    print(f"Found {len(result)}/{len(SERVER_TYPES)} server versions:")
+    for stype in SERVER_TYPES:
+        key = stype["key"]
+        if key in result:
+            info = result[key]
+            print(f"  {key}: {info['version']} (interface {info['interface_numeric']})")
+        else:
+            print(f"  {key}: NOT FOUND -> {toc_path(stype['suffix']).name} would stay frozen")
 
     return result
 
 
-def read_current_interfaces() -> tuple[dict[str, str], str]:
+def read_current_interfaces() -> tuple[dict[str, str], str, dict[str, str]]:
     """Read current interface from each TOC file.
-    Returns ({server_key: interface}, addon_version).
-    The addon version is taken from the retail TOC (canonical source).
+    Returns ({server_key: interface}, addon_version, {toc_filename: version}).
+    The addon version is taken from the retail TOC (canonical source); the per-file
+    versions let the caller prove every shipped TOC carries the same number.
     """
     interfaces = {}
+    versions = {}
     version = "1.0.0"
 
     for stype in SERVER_TYPES:
@@ -122,10 +132,12 @@ def read_current_interfaces() -> tuple[dict[str, str], str]:
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.startswith("## Interface:"):
                 interfaces[stype["key"]] = line.split(":", 1)[1].strip()
-            elif line.startswith("## Version:") and stype["key"] == "retail":
-                version = line.split(":", 1)[1].strip()
+            elif line.startswith("## Version:"):
+                versions[path.name] = line.split(":", 1)[1].strip()
+                if stype["key"] == "retail":
+                    version = line.split(":", 1)[1].strip()
 
-    return interfaces, version
+    return interfaces, version, versions
 
 
 def bump_patch(version: str) -> str:
@@ -161,16 +173,51 @@ def build_zip(version: str) -> Path:
     return zip_path
 
 
+def verify_declarations(web: dict[str, dict], toc_versions: dict[str, str]):
+    """Refuse to release on a declaration that no longer lines up.
+
+    A release tool that looks for five things, finds four and stays quiet freezes a
+    shipped file for as long as nobody happens to look. Each check below is a way a
+    TOC silently stops being maintained, so each one stops the run instead of
+    warning: a red job is fixed in one line, a frozen TOC is found months later.
+    """
+    problems = []
+
+    for stype in SERVER_TYPES:
+        if stype["key"] not in web:
+            problems.append(
+                f"no wiki row matched server type '{stype['key']}' -> "
+                f"{toc_path(stype['suffix']).name} can never be updated. "
+                f"The wiki most likely renamed the row; fix its 'match' in SERVER_TYPES."
+            )
+
+    known_tocs = {toc_path(st["suffix"]).name for st in SERVER_TYPES}
+    for orphan in sorted(t.name for t in ADDON_DIR.glob("*.toc") if t.name not in known_tocs):
+        problems.append(
+            f"{orphan} is shipped but no SERVER_TYPES entry drives it -> "
+            f"it will never be updated. Add a server type for it, or delete the file."
+        )
+
+    if len(set(toc_versions.values())) > 1:
+        detail = ", ".join(f"{name}={ver}" for name, ver in sorted(toc_versions.items()))
+        problems.append(f"TOC versions disagree, the release would be inconsistent: {detail}")
+
+    if problems:
+        print("\nERROR: declarations are out of sync, refusing to release:")
+        for problem in problems:
+            print(f"  - {problem}")
+        sys.exit(1)
+
+
 def run(apply: bool = False):
     web = fetch_versions()
-    current, addon_version = read_current_interfaces()
+    current, addon_version, toc_versions = read_current_interfaces()
+    verify_declarations(web, toc_versions)
 
     # Compare
     changes = []
     for stype in SERVER_TYPES:
         key = stype["key"]
-        if key not in web:
-            continue
         new_iface = web[key]["interface_numeric"]
         old_iface = current.get(key, "N/A")
 
@@ -190,16 +237,16 @@ def run(apply: bool = False):
         print(f"\n{len(changes)} change(s) detected. Use --apply to write.")
         return
 
-    # Apply: bump version on every existing TOC, update interface only where the wiki gave us one
+    # Apply: verify_declarations guarantees the wiki gave us every type, so every
+    # existing TOC gets both the fresh interface and the one new version.
     new_version = bump_patch(addon_version)
     for stype in SERVER_TYPES:
         path = toc_path(stype["suffix"])
         if not path.exists():
             continue
-        new_iface = web[stype["key"]]["interface_numeric"] if stype["key"] in web else None
+        new_iface = web[stype["key"]]["interface_numeric"]
         update_toc(path, new_iface, new_version)
-        iface_note = new_iface if new_iface is not None else "unchanged"
-        print(f"  Updated {path.name}: interface={iface_note}, version={new_version}")
+        print(f"  Updated {path.name}: interface={new_iface}, version={new_version}")
 
     print(f"\nVersion bumped: v{addon_version} -> v{new_version}")
     build_zip(new_version)

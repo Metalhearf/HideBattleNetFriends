@@ -25,8 +25,19 @@ jobs:
         id: check
         working-directory: _tools
         run: |
+          # Capture the status instead of letting set -e kill the step: release.py
+          # exits non-zero when a declaration no longer lines up (a renamed wiki row,
+          # an undriven TOC, disagreeing versions), and that explanation is the whole
+          # point -- it has to reach the log before the job turns red.
+          set +e
           output=$(python release.py 2>&1)
+          status=$?
+          set -e
           echo "$output"
+          if [ "$status" -ne 0 ]; then
+            echo "::error::release.py refused to release, see the output above"
+            exit "$status"
+          fi
           if echo "$output" | grep -q "Already up to date"; then
             echo "has_updates=false" >> "$GITHUB_OUTPUT"
           else
