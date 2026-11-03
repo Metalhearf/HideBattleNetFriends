@@ -6,34 +6,103 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![CurseForge](https://img.shields.io/badge/CurseForge-HideBattleNetFriends-orange)](https://www.curseforge.com/wow/addons/hidebattlenetfriends)
 
-A lightweight World of Warcraft addon that hides all Battle.net (Real ID and BattleTag) friends from your in-game friends list. Only your character-level WoW friends remain visible.
+Keep your real names and Battle.net contacts out of World of Warcraft. Hide Battle.net friends entirely, show BattleTags instead of real names, or filter the list down to the friends who are actually playing WoW. Every change shows up live in your friends list.
+
+<img src="Screenshots/window.png" alt="Settings window next to the friends list" width="700"/>
 
 ## Why?
 
-- **Streaming & content creation** - Prevents accidental display of real names and BattleTags on stream or in screenshots.
-- **Cleaner friends list** - See only your WoW friends from the same server/faction, without the clutter of cross-game Battle.net contacts.
-- **Privacy** - Keep your Battle.net social graph private while still playing normally.
+- **Streaming and screenshots** - real names never show up on stream: not in the friends list, tooltips, whispers, pop-ups or chat.
+- **A cleaner friends list** - see only the people playing WoW right now, not everyone idling in the Battle.net app or playing another game.
+- **The classic feel** - one click turns the friends list back into the plain WoW friends list, without Battle.net clutter or modern tabs.
 
-## How it works
+## Profiles
 
-The addon overrides `BNGetNumFriends()` to return zero, so the WoW friends UI simply sees no Battle.net friends to display. That's it - 4 lines of Lua.
+Pick a starting point, then fine-tune any option by hand.
 
-Nothing is deleted or modified server-side. You can still:
-- Receive and reply to Battle.net whispers
-- Send and accept Battle.net friend requests
-- See your Battle.net friends in the Battle.net app
+| Profile | What you get |
+|---|---|
+| **Classic experience** | No Battle.net at all: friends, requests, notifications, your BattleTag and the modern tabs are hidden. |
+| **No Battle.net** | Same, but keeps the tabs. |
+| **Online friends** | Every friend, but only those who are online. |
+| **WoW friends** | Only friends playing World of Warcraft right now. |
+| **Show everything** | Nothing hidden, the friends list as Blizzard made it. |
+
+## Options
+
+**Friends list**
+- Hide Battle.net friends
+- Hide friend requests
+- BattleTags instead of real names, everywhere a real name can appear (see below)
+- Hide friend notes and friends' broadcasts
+- Hide offline WoW (character) friends
+
+**Battle.net friends filter**
+- Hide offline friends
+- Hide friends who are only in the Battle.net app or mobile app
+- Hide friends playing another game
+
+**Privacy**
+- Hide your own BattleTag at the top of the friends list
+- Hold **Shift** while opening the friends list to see everything until you close it
+
+**Notifications**
+- Mute Battle.net notifications (online, offline, broadcasts, requests). Your previous settings come back when you turn it off.
+- Hide Quick Join pop-ups
+
+**Tabs** (Retail)
+- Hide the Quick Join, Recent Allies and Recruit A Friend tabs
+
+Options that do not exist on your version of the game are not shown.
+
+### Where real names are replaced
+
+With *BattleTags instead of real names*, the BattleTag (without its #number) replaces the real name in:
+
+- the friends list and its tooltip
+- Battle.net whispers, sent and received, and the "Tell ..." line while typing (`/r` still works)
+- separate whisper tabs
+- online/offline messages in chat (clicking the name still opens a whisper)
+- Battle.net pop-up notifications
+- the right-click menu on a Battle.net friend
+- the block, remove and note confirmation dialogs
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/hbnf` | Open or close the settings window |
+| `/hbnf off` | Turn all hiding off until the next `/reload` |
+| `/hbnf on` | Turn it back on |
+| `/hbnf help` | List these commands in chat |
+
+### Where to find the settings
+
+- **Friends list:** the HideBattleNetFriends button at the top right of the friends list, next to the close button.
+- **Minimap:** the round HideBattleNetFriends button (drag it to move it).
+- **Addon compartment:** the addons button under the minimap (Retail).
+- **Game options:** *Options > AddOns > HideBattleNetFriends*.
+- **Chat:** `/hbnf`.
+
+<img src="Screenshots/friends-button.png" alt="The HideBattleNetFriends button next to the close button of the friends list" width="290"/>
+
+A key binding for on/off is in *Options > Key Bindings > AddOns*.
+
+Hiding the minimap button is safe: `/hbnf` always opens the window.
 
 ## Compatibility
 
 | Client | Supported |
 |---|---|
-| Retail (The War Within / Midnight) | Yes |
-| Classic (Cataclysm / MoP) | Yes |
+| Retail | Yes |
+| Classic (Mists of Pandaria) | Yes |
 | Classic Era | Yes |
 | Anniversary Edition | Yes |
 | Forever | Yes |
 
-Interface versions are automatically kept up to date via CI.
+Available in English, French, German, Spanish, Italian, Portuguese, Russian, Korean and Chinese (simplified and traditional).
+
+Nothing is changed on Blizzard's side: the addon only changes what your game displays. Your Battle.net friends are still there in the Battle.net app, and whispers and friend requests keep working.
 
 ## Installation
 
@@ -50,11 +119,11 @@ Install via [CurseForge](https://www.curseforge.com/wow/addons/hidebattlenetfrie
 ### Manual
 Clone this repository and copy (or symlink) the `HideBattleNetFriends/` folder into your AddOns directory.
 
-## Screenshot
+## Screenshots
 
-<img src="Screenshots/friendlist.JPG" alt="Friends list with addon enabled" width="500"/>
+<img src="Screenshots/profiles.png" alt="The friends list under four profiles" width="600"/>
 
-*Friends list with the addon enabled: only WoW character friends are shown.*
+*The same friends list under Classic experience, No Battle.net, Online friends and Show everything.*
 
 ## Contributing
 
@@ -63,3 +132,5 @@ Contributions are welcome! Feel free to open issues or submit pull requests.
 ## License
 
 This project is licensed under the [GNU General Public License v3.0](LICENSE).
+
+<sub>Made by Metalhearf.</sub>

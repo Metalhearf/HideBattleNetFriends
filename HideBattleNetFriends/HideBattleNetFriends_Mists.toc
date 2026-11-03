@@ -1,8 +1,9 @@
 ## Interface: 50504
 ## Title: HideBattleNetFriends
-## Notes: Hides Battle.net/BattleTag friends from the in-game friends list.
+## Notes: Hides Battle.net friends and real names from the in-game UI, with profiles and friend filters.
 ## Author: Metalhearf
-## Version: 1.2.8
+## Version: 2.0.0
+## SavedVariables: HideBattleNetFriendsDB
 
 ## IconTexture: Interface\AddOns\HideBattleNetFriends\Logo\HideBattleNetFriends64
 
@@ -19,5 +20,8 @@
 ## Category-zhTW: 使用者介面
 
 ## X-Curse-Project-ID: 490332
+## AddonCompartmentFunc: HideBattleNetFriends_Toggle
 
-HideBattleNetFriends.lua
+Locales.lua
+Core.lua
+Options.lua

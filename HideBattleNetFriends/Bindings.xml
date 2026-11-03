@@ -1,0 +1,5 @@
+<Bindings>
+	<Binding name="HIDEBATTLENETFRIENDS_PAUSE" header="HIDEBATTLENETFRIENDS" category="ADDONS">
+		HideBattleNetFriends_TogglePause()
+	</Binding>
+</Bindings>
