@@ -10,7 +10,7 @@ local groups = {
 	{ "groupPrivacy", { "hideBattleTag", "shiftReveal" } },
 	{ "groupNotifications", { "muteToasts", "hideQuickJoinToasts" } },
 	{ "groupTabs", { "hideQuickJoinTab", "hideRecentAlliesTab", "hideRecruitTab" } },
-	{ "groupDisplay", { "hideMinimapButton" } },
+	{ "groupDisplay", { "hideMinimapButton", "hideFriendsButton" } },
 }
 local keys = {}
 for _, group in ipairs(groups) do
@@ -90,9 +90,12 @@ local function set(key, value)
 	end
 end
 
+-- where the addon's buttons show is not part of any profile
+local buttonKeys = { hideMinimapButton = true, hideFriendsButton = true }
+
 local function matchesProfile(values)
 	for _, key in ipairs(keys) do
-		if key ~= "hideMinimapButton" and (values[key] or false) ~= (ns.db[key] or false) then
+		if not buttonKeys[key] and (values[key] or false) ~= (ns.db[key] or false) then
 			return false
 		end
 	end
@@ -101,7 +104,7 @@ end
 
 local function applyProfile(values)
 	for _, key in ipairs(keys) do
-		if key ~= "hideMinimapButton" then
+		if not buttonKeys[key] then
 			set(key, values[key] or false)
 		end
 	end
@@ -318,15 +321,7 @@ local function setupMinimapButton()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
 	button:SetShown(not ns.db.hideMinimapButton)
-
-	function ns.OnSet(key, value)
-		if key == "hideMinimapButton" then
-			button:SetShown(not value)
-			if value then
-				print("|cff00ccffHideBattleNetFriends|r: " .. L.slashHint)
-			end
-		end
-	end
+	return button
 end
 
 local function setupFriendsButton()
@@ -347,22 +342,35 @@ local function setupFriendsButton()
 		GameTooltip:Show()
 	end)
 	button:SetScript("OnLeave", GameTooltip_Hide)
+	button:SetShown(not ns.db.hideFriendsButton)
+	return button
 end
 
 function ns.SetupOptions()
 	pruneGroups()
 	setupPanel()
 	setupWindow()
-	setupMinimapButton()
-	setupFriendsButton()
+	local buttons = { hideMinimapButton = setupMinimapButton(), hideFriendsButton = setupFriendsButton() }
+	function ns.OnSet(key, value)
+		if buttons[key] then
+			buttons[key]:SetShown(not value)
+			if value then
+				print("|cff00ccffHideBattleNetFriends|r: " .. L.buttonsHint)
+			end
+		end
+	end
 	SLASH_HIDEBATTLENETFRIENDS1 = "/hbnf"
 	SlashCmdList.HIDEBATTLENETFRIENDS = function(msg)
 		msg = msg and msg:lower():match("%a+")
 		if msg == "on" or msg == "off" then
 			ns.SetPaused(msg == "off")
+		elseif msg == "buttons" or msg == "button" then
+			set("hideMinimapButton", false)
+			set("hideFriendsButton", false)
+			print("|cff00ccffHideBattleNetFriends|r: " .. L.buttonsShown)
 		elseif msg then
 			print("|cff00ccff" .. TITLE .. "|r")
-			for _, line in ipairs({ { "", L.helpToggle }, { " off", L.helpOff }, { " on", L.helpOn }, { " help", L.helpHelp } }) do
+			for _, line in ipairs({ { "", L.helpToggle }, { " off", L.helpOff }, { " on", L.helpOn }, { " buttons", L.helpButtons }, { " help", L.helpHelp } }) do
 				print("  |cffffd100/hbnf" .. line[1] .. "|r - " .. line[2])
 			end
 			print(L.helpWhere)

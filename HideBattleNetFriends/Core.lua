@@ -14,6 +14,7 @@ ns.defaults = {
 	hideRecruitTab = false,
 	hideRecentAlliesTab = false,
 	hideMinimapButton = false,
+	hideFriendsButton = false,
 	hideOffline = false,
 	hideAppOnly = false,
 	hideOtherGames = false,

@@ -50,6 +50,10 @@ Pick a starting point, then fine-tune any option by hand.
 - Mute Battle.net notifications (online, offline, broadcasts, requests). Your previous settings come back when you turn it off.
 - Hide Quick Join pop-ups
 
+**Display**
+- Hide the minimap button
+- Hide the friends list button, for a minimal friends list
+
 **Tabs** (Retail)
 - Hide the Quick Join, Recent Allies and Recruit A Friend tabs
 
@@ -83,6 +87,7 @@ With *BattleTags instead of real names*, the BattleTag (without its #number) rep
 | `/hbnf` | Open or close the settings window |
 | `/hbnf off` | Turn all hiding off until the next `/reload` |
 | `/hbnf on` | Turn it back on |
+| `/hbnf buttons` | Show the minimap and friends list buttons again |
 | `/hbnf help` | List these commands in chat |
 
 ### Where to find the settings
@@ -97,7 +102,7 @@ With *BattleTags instead of real names*, the BattleTag (without its #number) rep
 
 A key binding for on/off is in *Options > Key Bindings > AddOns*.
 
-Hiding the minimap button is safe: `/hbnf` always opens the window.
+Hiding the minimap or friends list button is safe: `/hbnf` always opens the window, and `/hbnf buttons` brings both buttons back.
 
 ## Compatibility
 

@@ -2,7 +2,7 @@
 ## Title: HideBattleNetFriends
 ## Notes: Hides Battle.net friends and real names from the in-game UI, with profiles and friend filters.
 ## Author: Metalhearf
-## Version: 2.1.0
+## Version: 2.2.0
 ## SavedVariables: HideBattleNetFriendsDB
 
 ## IconTexture: Interface\AddOns\HideBattleNetFriends\Logo\HideBattleNetFriends64
