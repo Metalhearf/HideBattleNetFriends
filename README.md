@@ -23,7 +23,7 @@ Pick a starting point, then fine-tune any option by hand.
 | Profile | What you get |
 |---|---|
 | **Classic experience** | No Battle.net at all: friends, requests, notifications, your BattleTag and the modern tabs are hidden. |
-| **No Battle.net** | Same, but keeps the tabs. |
+| **No Battle.net** | Same, but keeps the tabs. Not on Forever, where it would be identical to Classic experience. |
 | **Online friends** | Every friend, but only those who are online. |
 | **WoW friends** | Only friends playing World of Warcraft right now. |
 | **Show everything** | Nothing hidden, the friends list as Blizzard made it. |
@@ -54,6 +54,15 @@ Pick a starting point, then fine-tune any option by hand.
 - Hide the Quick Join, Recent Allies and Recruit A Friend tabs
 
 Options that do not exist on your version of the game are not shown.
+
+### WoW Forever
+
+Forever has a new social window, and Blizzard blocks any addon that changes its friends list. HideBattleNetFriends keeps Blizzard's window (tabs, status, search, Filter button) and lays its own filtered copy of the friends list over it.
+
+- **Hide Battle.net friends** keeps your in-game friends (their character names) and hides Battle.net/BattleTag friends.
+- **Hide offline WoW friends** applies to those in-game friends.
+- Blizzard's search and Filter button still work on the filtered list.
+- Hiding friend requests and tabs is not available there: it would mean changing Blizzard's window.
 
 ### Where real names are replaced
 

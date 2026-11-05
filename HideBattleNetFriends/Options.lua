@@ -28,15 +28,41 @@ local profiles = {
 	{ "profileWow", { hideOffline = true, hideAppOnly = true, hideOtherGames = true, hideWowOffline = true, shiftReveal = true } },
 	{ "profileBlizzard", {} },
 }
+-- Forever's Social UI list cannot be filtered by an addon (see Core.lua)
+local function classicWindow()
+	return ns.CanFilter()
+end
 -- options for Blizzard features that some clients (Classic) do not have
 local available = {
-	hideQuickJoinTab = function() return FRIEND_TAB_QUICK_JOIN and _G["FriendsFrameTab" .. FRIEND_TAB_QUICK_JOIN] end,
+	-- shortcut: the Social UI tabs (Forever) cannot be hidden without tainting that window, so these options are left out there
+	hideQuickJoinTab = function() return ns.FriendsHost() == FriendsFrame and FRIEND_TAB_QUICK_JOIN and _G["FriendsFrameTab" .. FRIEND_TAB_QUICK_JOIN] end,
+	hideRequests = function() return ns.FriendsHost() == FriendsFrame end,
+	hideFriends = classicWindow,
+	hideWowOffline = classicWindow,
+	hideOffline = classicWindow,
+	hideAppOnly = classicWindow,
+	hideOtherGames = classicWindow,
 	hideQuickJoinToasts = function() return QuickJoinToastButton and QuickJoinToastButton.Toast end,
-	hideRecruitTab = function() return FriendsTabHeader and FriendsTabHeader.recruitAFriendTabID end,
-	hideRecentAlliesTab = function() return FriendsTabHeader and FriendsTabHeader.recentAlliesTabID end,
+	hideRecruitTab = function() return ns.FriendsHost() == FriendsFrame and FriendsTabHeader and FriendsTabHeader.recruitAFriendTabID end,
+	hideRecentAlliesTab = function() return ns.FriendsHost() == FriendsFrame and FriendsTabHeader and FriendsTabHeader.recentAlliesTabID end,
 }
 
 local function pruneGroups()
+	-- the Social UI's tabs cannot be hidden, which leaves No Battle.net identical to Classic experience there
+	if ns.FriendsHost() ~= FriendsFrame and ns.CanFilter() then
+		for i = #profiles, 1, -1 do
+			if profiles[i][1] == "profileNoBnet" then
+				tremove(profiles, i)
+			end
+		end
+	end
+	if not classicWindow() then
+		for i = #profiles, 1, -1 do
+			if profiles[i][1] ~= "profileNoBnet" and profiles[i][1] ~= "profileBlizzard" then
+				tremove(profiles, i)
+			end
+		end
+	end
 	for i = #groups, 1, -1 do
 		local list = groups[i][2]
 		for j = #list, 1, -1 do
@@ -190,6 +216,12 @@ local function setupWindow()
 		end
 		y = y - 8
 	end
+	if not classicWindow() then
+		local filterHint = window:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
+		filterHint:SetPoint("TOP", 0, y - 2)
+		filterHint:SetText(L.filterHint)
+		y = y - 14
+	end
 	local hint = window:CreateFontString(nil, "ARTWORK", "GameFontDisableSmall")
 	hint:SetPoint("TOP", 0, y - 2)
 	hint:SetText(L.helpHint)
@@ -217,12 +249,13 @@ local function setupWindow()
 
 	window:SetScript("OnShow", function(self)
 		sync()
-		if not FriendsFrame:IsShown() and not InCombatLockdown() then
-			ShowUIPanel(FriendsFrame)
+		local host = ns.FriendsHost()
+		if not host:IsShown() and not InCombatLockdown() then
+			ShowUIPanel(host)
 		end
 		self:ClearAllPoints()
-		if FriendsFrame:IsShown() then
-			self:SetPoint("TOPLEFT", FriendsFrame, "TOPRIGHT", 2, 0)
+		if host:IsShown() then
+			self:SetPoint("TOPLEFT", host, "TOPRIGHT", 2, 0)
 		else
 			self:SetPoint("CENTER")
 		end
@@ -297,10 +330,11 @@ local function setupMinimapButton()
 end
 
 local function setupFriendsButton()
-	local close = FriendsFrame.CloseButton or FriendsFrameCloseButton
+	local host = ns.FriendsHost()
+	local close = host.CloseButton or FriendsFrameCloseButton
 	if not close then return end
 	-- the title bar next to the close button is the same on every client and no tab or language can grow into it
-	local button = CreateFrame("Button", "HideBattleNetFriendsFriendsButton", FriendsFrame)
+	local button = CreateFrame("Button", "HideBattleNetFriendsFriendsButton", host)
 	button:SetSize(18, 18)
 	button:SetFrameLevel(close:GetFrameLevel())
 	button:SetPoint("RIGHT", close, "LEFT", -2, 0)

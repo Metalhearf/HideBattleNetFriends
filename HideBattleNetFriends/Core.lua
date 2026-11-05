@@ -34,16 +34,21 @@ local function active(key)
 	return enabled(key) and not revealed
 end
 
+-- the Social UI (Forever) reads these while running protected code: replacing them gets the addon blocked there
+local socialAtLoad = C_SocialUI and C_SocialUI.IsSystemEnabled and C_SocialUI.IsSystemEnabled()
+
 local BNGetNumFriendsOrig = BNGetNumFriends
-BNGetNumFriends = function(...)
-	if active("hideFriends") then
-		return 0, 0, 0, 0
+if not socialAtLoad then
+	BNGetNumFriends = function(...)
+		if active("hideFriends") then
+			return 0, 0, 0, 0
+		end
+		return BNGetNumFriendsOrig(...)
 	end
-	return BNGetNumFriendsOrig(...)
 end
 
 local BNGetNumFriendInvitesOrig = BNGetNumFriendInvites
-if BNGetNumFriendInvitesOrig then
+if BNGetNumFriendInvitesOrig and not socialAtLoad then
 	BNGetNumFriendInvites = function(...)
 		if active("hideRequests") then
 			return 0
@@ -68,12 +73,8 @@ end
 -- clients that mean "online but not in a game": desktop app, mobile app, launcher
 local idleClients = { App = true, BSAp = true, CLNT = true, [""] = true }
 
-local function filteredOut(element)
-	if element.buttonType == FRIENDS_BUTTON_TYPE_WOW then
-		local info = C_FriendList.GetFriendInfoByIndex(element.id)
-		return info and not info.connected and active("hideWowOffline")
-	end
-	local info = element.buttonType == FRIENDS_BUTTON_TYPE_BNET and C_BattleNet.GetFriendAccountInfo(element.id)
+local function bnetFilteredOut(index)
+	local info = C_BattleNet.GetFriendAccountInfo(index)
 	if not info then
 		return false
 	end
@@ -86,6 +87,30 @@ local function filteredOut(element)
 		return active("hideAppOnly")
 	end
 	return client ~= BNET_CLIENT_WOW and active("hideOtherGames")
+end
+
+local function filteredOut(element)
+	if element.buttonType == FRIENDS_BUTTON_TYPE_WOW then
+		local info = C_FriendList.GetFriendInfoByIndex(element.id)
+		return info and not info.connected and active("hideWowOffline")
+	end
+	return element.buttonType == FRIENDS_BUTTON_TYPE_BNET and bnetFilteredOut(element.id)
+end
+
+-- Forever (and later clients) replace FriendsFrame with the Social UI window
+local function socialUI()
+	return SocialUIControl and SocialUIControl.IsEnabled() and SocialUIFrame or nil
+end
+
+local socialOverlay
+
+function ns.FriendsHost()
+	return socialUI() or FriendsFrame
+end
+
+-- true when this client's friends list can be filtered (the Social UI only through the overlay)
+function ns.CanFilter()
+	return not socialUI() or socialOverlay ~= nil
 end
 
 local function filtering()
@@ -260,6 +285,14 @@ function ns.Refresh()
 	if FriendsFrame:IsShown() and FriendsList_Update then
 		FriendsList_Update(true)
 	end
+	local social = socialUI()
+	local tag = social and social.BattleNetBar and social.BattleNetBar.ControlsContainer and social.BattleNetBar.ControlsContainer.PersonalBattleTagDisplay
+	if tag then
+		tag:SetAlpha(active("hideBattleTag") and 0 or 1)
+	end
+	if socialOverlay then
+		socialOverlay()
+	end
 end
 
 function ns.IsPaused()
@@ -407,6 +440,147 @@ local function setupChat()
 	end
 end
 
+-- Blizzard's Social UI list cannot be changed by an addon without the next opening being blocked (protected friend search),
+-- so only text already on screen is touched there
+local function setupSocialUI(frame)
+	if FriendsListSocialCardMixin then
+		-- cards copy the mixin when first created, which happens after login
+		-- in-game (Title) friends show their character name, not a real name
+		local function isTitle(info)
+			return info and Enum.BattleNetFriendLevel and info.friendLevel == Enum.BattleNetFriendLevel.Title
+		end
+		hooksecurefunc(FriendsListSocialCardMixin, "RefreshFriendNameDisplayText", function(card)
+			if active("anonymize") and not isTitle(card.elementData.accountInfo) then
+				maskName(card.FriendName, card.elementData.accountInfo)
+			end
+		end)
+		hooksecurefunc(FriendsListSocialCardMixin, "ShowTooltip", function(card)
+			local tooltip = GetAppropriateTooltip and GetAppropriateTooltip() or GameTooltip
+			local info = card.elementData.accountInfo
+			local name = tooltip:GetName()
+			if info and name then
+				if active("anonymize") and not isTitle(info) then
+					maskName(_G[name .. "TextLeft1"], info)
+				end
+				-- shortcut: the emptied note/broadcast lines keep their height, a small gap is left
+				for i = 2, tooltip:NumLines() do
+					local line = _G[name .. "TextLeft" .. i]
+					local text = line and line:GetText()
+					if text and ((active("hideNotes") and info.note ~= "" and text:find(info.note, 1, true))
+						or (active("hideBroadcasts") and info.customMessage ~= "" and text:find(info.customMessage, 1, true))) then
+						line:SetText("")
+					end
+				end
+				tooltip:Show()
+			end
+			local window = HideBattleNetFriendsWindow
+			if window and window:IsShown() then
+				tooltip:ClearAllPoints()
+				tooltip:SetPoint("TOPLEFT", window, "TOPRIGHT", 2, 0)
+			end
+		end)
+	end
+
+	frame:HookScript("OnShow", function()
+		revealed = db.shiftReveal and IsShiftKeyDown() or false
+		-- next frame, outside Blizzard's show code
+		C_Timer.After(0, ns.Refresh)
+	end)
+	frame:HookScript("OnHide", function()
+		revealed = false
+	end)
+end
+
+local function isTitleFriend(info)
+	return Enum.BattleNetFriendLevel and info.friendLevel == Enum.BattleNetFriendLevel.Title
+end
+
+-- Forever's in-game friends are Title friends of the Battle.net list; "Hide Battle.net friends" keeps them, like WoW friends elsewhere
+local function keepSocialFriend(index, info)
+	if isTitleFriend(info) then
+		return info.gameAccountInfo.isOnline or not active("hideWowOffline")
+	end
+	return not active("hideFriends") and not bnetFilteredOut(index)
+end
+
+-- Blizzard's status filters (the Filter button); its friend search is protected, so they are applied here
+local function matchesSearch(info, search)
+	local game = info.gameAccountInfo
+	if search.isOnline or search.isOffline or search.isAFK or search.isDND then
+		local online = game.isOnline
+		local afk = online and (info.isAFK or game.isGameAFK)
+		local dnd = online and (info.isDND or game.isGameBusy)
+		if not ((search.isOnline and online) or (search.isOffline and not online) or (search.isAFK and afk) or (search.isDND and dnd)) then
+			return false
+		end
+	end
+	local text = search.searchText and search.searchText:lower() or ""
+	if text == "" then return true end
+	for _, field in ipairs({ info.battleTag, game.characterName, game.areaName, info.note }) do
+		if field and field:lower():find(text, 1, true) then
+			return true
+		end
+	end
+	return false
+end
+
+-- Blizzard's Social UI list cannot be filtered by an addon (its friend search is protected and any change to it gets the
+-- next opening blocked), so an addon-owned copy built from the same template is laid over it, and Blizzard's list keeps
+-- running untouched underneath, invisible; the rest of the window (tabs, status, search, filter) stays Blizzard's
+local function listFiltering()
+	return filtering() or active("hideFriends") or active("hideNotes") or active("hideBroadcasts")
+end
+
+local function setupSocialOverlay(frame)
+	local blizzardList = frame.FriendsList
+	local copy = CreateFrame("Frame", nil, blizzardList, "FriendsListSocialViewTemplate")
+	copy:SetAllPoints(blizzardList)
+	copy:SetFrameLevel(blizzardList:GetFrameLevel() + 20)
+	-- the copy's own search bar, dividers and button sit exactly under Blizzard's, which stay in use
+	for _, key in ipairs({ "FilterBar", "ActionButton", "TopDivider", "BottomDivider" }) do
+		if copy[key] then copy[key]:SetAlpha(0) end
+	end
+	copy.FilterBar:Hide()
+	copy.ActionButton:Hide()
+	copy.GenerateDataProvider = function(self)
+		local dataProvider = CreateTreeDataProvider()
+		local search = blizzardList:BuildActiveSearchInfo()
+		local kept = {}
+		for index = 1, BNGetNumFriends() do
+			local info = C_BattleNet.GetFriendAccountInfo(index)
+			if info and keepSocialFriend(index, info) and matchesSearch(info, search) then
+				tinsert(kept, index)
+			end
+		end
+		self:InsertFriendsIntoDataProvider(dataProvider, kept)
+		for _, node in dataProvider:EnumerateEntireRange() do
+			local info = node:GetData().accountInfo
+			if info then
+				if active("hideNotes") then info.note = "" end
+				if active("hideBroadcasts") then info.customMessage = "" end
+			end
+		end
+		return dataProvider
+	end
+	local function refreshCopy()
+		if copy:IsShown() then
+			copy:Refresh(true)
+		end
+	end
+	hooksecurefunc(blizzardList, "Refresh", refreshCopy)
+	hooksecurefunc(blizzardList, "RefreshSearchResults", refreshCopy)
+
+	socialOverlay = function()
+		local covering = listFiltering()
+		copy:SetShown(covering)
+		-- alpha only: a C call that leaves Blizzard's Lua state untouched
+		blizzardList.ScrollBox:SetAlpha(covering and 0 or 1)
+		blizzardList.ScrollBar:SetAlpha(covering and 0 or 1)
+		refreshCopy()
+	end
+	socialOverlay()
+end
+
 local function onLogin()
 	HideBattleNetFriendsDB = HideBattleNetFriendsDB or {}
 	db = HideBattleNetFriendsDB
@@ -438,7 +612,9 @@ local function onLogin()
 		end)
 	end
 
-	if FriendsList_Update and FriendsListFrame and FriendsListFrame.ScrollBox then
+	if socialUI() then
+		-- the old FriendsFrame still loads but is never shown
+	elseif FriendsList_Update and FriendsListFrame and FriendsListFrame.ScrollBox then
 		-- Blizzard rebuilds the whole list each update; drop filtered friends and the dividers they leave behind
 		hooksecurefunc("FriendsList_Update", filterFriendsList)
 	elseif FriendsList_Update and FriendsFrameFriendsScrollFrame then
@@ -489,6 +665,13 @@ local function onLogin()
 					self:Hide()
 				end
 			end)
+		end
+	end
+
+	if socialUI() then
+		setupSocialUI(socialUI())
+		if FriendsListSocialViewMixin and socialUI().FriendsList then
+			setupSocialOverlay(socialUI())
 		end
 	end
 

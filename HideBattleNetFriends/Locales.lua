@@ -60,6 +60,7 @@ local L = {
 	helpHelp = "show this list",
 	helpWhere = "The settings are also in the friends list (button at the top right, next to the close button), on the minimap and in Options > AddOns.",
 	helpHint = "Type /hbnf help to see the commands.",
+	filterHint = "Online friends only: Filter button of the friends list.",
 }
 
 local locales = {
@@ -123,6 +124,7 @@ local locales = {
 		helpHelp = "afficher cette liste",
 		helpWhere = "Les réglages sont aussi dans la liste d'amis (bouton en haut à droite, à côté de la croix), sur la minicarte et dans Options > AddOns.",
 		helpHint = "Tapez /hbnf help pour voir les commandes.",
+		filterHint = "Amis en ligne seulement : bouton Filtre de la liste.",
 	},
 	deDE = {
 		groupFriends = "Freundesliste",
