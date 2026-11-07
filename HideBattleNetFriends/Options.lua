@@ -10,7 +10,7 @@ local groups = {
 	{ "groupPrivacy", { "hideBattleTag", "shiftReveal" } },
 	{ "groupNotifications", { "muteToasts", "hideQuickJoinToasts" } },
 	{ "groupTabs", { "hideQuickJoinTab", "hideRecentAlliesTab", "hideRecruitTab" } },
-	{ "groupDisplay", { "hideMinimapButton", "hideFriendsButton" } },
+	{ "groupDisplay", { "classicWindow", "hideMinimapButton", "hideFriendsButton" } },
 }
 local keys = {}
 for _, group in ipairs(groups) do
@@ -33,7 +33,15 @@ local function classicWindow()
 	return ns.CanFilter()
 end
 -- options for Blizzard features that some clients (Classic) do not have
+local isLoaded = C_AddOns and C_AddOns.IsAddOnLoaded or IsAddOnLoaded
+
+-- Forever's Social UI replaced the old friends window, which still ships; ClassicUI Forever already brings it back
+local function canUseClassicWindow()
+	return SocialUIFrame and ns.FriendsHost() == SocialUIFrame and not (isLoaded and isLoaded("ClassicUIForever"))
+end
+
 local available = {
+	classicWindow = canUseClassicWindow,
 	-- shortcut: the Social UI tabs (Forever) cannot be hidden without tainting that window, so these options are left out there
 	hideQuickJoinTab = function() return ns.FriendsHost() == FriendsFrame and FRIEND_TAB_QUICK_JOIN and _G["FriendsFrameTab" .. FRIEND_TAB_QUICK_JOIN] end,
 	hideRequests = function() return ns.FriendsHost() == FriendsFrame end,
@@ -91,7 +99,7 @@ local function set(key, value)
 end
 
 -- where the addon's buttons show is not part of any profile
-local buttonKeys = { hideMinimapButton = true, hideFriendsButton = true }
+local buttonKeys = { hideMinimapButton = true, hideFriendsButton = true, classicWindow = true }
 
 local function matchesProfile(values)
 	for _, key in ipairs(keys) do
@@ -250,10 +258,23 @@ local function setupWindow()
 		end
 	end
 
+	-- closing the friends list it is docked to closes this window too
+	for _, host in ipairs({ FriendsFrame, SocialUIFrame or false }) do
+		if host then
+			host:HookScript("OnHide", function()
+				local point, relative = window:GetPoint(1)
+				if window:IsShown() and point and relative == host then
+					window:Hide()
+				end
+			end)
+		end
+	end
+
 	window:SetScript("OnShow", function(self)
 		sync()
 		local host = ns.FriendsHost()
-		if not host:IsShown() and not InCombatLockdown() then
+		-- never the Social UI: opened by an addon, its friends list gets blocked
+		if host == FriendsFrame and not host:IsShown() and not InCombatLockdown() then
 			ShowUIPanel(host)
 		end
 		self:ClearAllPoints()
@@ -324,15 +345,38 @@ local function setupMinimapButton()
 	return button
 end
 
-local function setupFriendsButton()
-	local host = ns.FriendsHost()
-	local close = host.CloseButton or FriendsFrameCloseButton
+local function setupFriendsButton(host)
+	local close = host.CloseButton or host == FriendsFrame and FriendsFrameCloseButton
 	if not close then return end
 	-- the title bar next to the close button is the same on every client and no tab or language can grow into it
-	local button = CreateFrame("Button", "HideBattleNetFriendsFriendsButton", host)
+	local button = CreateFrame("Button", nil, host)
 	button:SetSize(18, 18)
 	button:SetFrameLevel(close:GetFrameLevel())
 	button:SetPoint("RIGHT", close, "LEFT", -2, 0)
+	-- ClassicUI Forever shows a lock (22 px left of the close button at a 32 px close button) on title bar hover, and a
+	-- reset button 44 px left of it once the window was moved: stay left of what it can show
+	if host == FriendsFrame and isLoaded and isLoaded("ClassicUIForever") then
+		local reset
+		local function place()
+			local k = close:GetWidth() / 32
+			button:ClearAllPoints()
+			button:SetPoint("RIGHT", close, "LEFT", -2 - (reset and reset:IsShown() and 44 or 22) * k, 0)
+		end
+		host:HookScript("OnShow", function()
+			-- its buttons are unnamed and made once the window shows: find the reset by where it sits
+			if not reset then
+				for _, child in ipairs({ host:GetChildren() }) do
+					local point, relative, _, x = child:GetPoint(1)
+					if child ~= button and point == "CENTER" and relative == close and x and x < -33 * close:GetWidth() / 32 then
+						reset = child
+						reset:HookScript("OnShow", place)
+						reset:HookScript("OnHide", place)
+					end
+				end
+			end
+			place()
+		end)
+	end
 	button:SetNormalTexture("Interface\\AddOns\\" .. addonName .. "\\Logo\\HideBattleNetFriends32")
 	button:SetHighlightTexture("Interface\\Buttons\\ButtonHilight-Square", "ADD")
 	button:SetScript("OnClick", toggle)
@@ -346,14 +390,69 @@ local function setupFriendsButton()
 	return button
 end
 
+-- the friends keys are bound over to a button of ours that opens the old window: Blizzard's own opener is left alone,
+-- since replacing it would get the Social UI blocked
+local function setupClassicWindow()
+	if not canUseClassicWindow() then return end
+	local opener = CreateFrame("Button", "HideBattleNetFriendsClassicOpener", UIParent)
+	opener:SetScript("OnClick", function()
+		local shown = FriendsFrame:IsShown()
+		if InCombatLockdown() then
+			-- the panel manager is off limits in combat; a plain show still works there
+			FriendsFrame:SetShown(not shown)
+		elseif shown then
+			HideUIPanel(FriendsFrame)
+		else
+			ShowUIPanel(FriendsFrame)
+		end
+	end)
+	local owner = CreateFrame("Frame")
+	local pending
+	local function bind()
+		-- bindings cannot change in combat; done once it ends
+		if InCombatLockdown() then
+			pending = true
+			return
+		end
+		pending = nil
+		ClearOverrideBindings(owner)
+		if not ns.db.classicWindow then return end
+		for _, action in ipairs({ "TOGGLESOCIAL", "TOGGLEFRIENDSTAB" }) do
+			for _, key in ipairs({ GetBindingKey(action) }) do
+				SetOverrideBindingClick(owner, true, key, opener:GetName())
+			end
+		end
+	end
+	owner:RegisterEvent("UPDATE_BINDINGS")
+	owner:RegisterEvent("PLAYER_REGEN_ENABLED")
+	owner:SetScript("OnEvent", function(_, event)
+		if event == "UPDATE_BINDINGS" or pending then
+			bind()
+		end
+	end)
+	bind()
+	return bind
+end
+
 function ns.SetupOptions()
 	pruneGroups()
 	setupPanel()
 	setupWindow()
-	local buttons = { hideMinimapButton = setupMinimapButton(), hideFriendsButton = setupFriendsButton() }
+	-- Forever has two friends windows: the Social UI, and the old one that addons such as ClassicUI Forever bring back
+	local buttons = { hideMinimapButton = { setupMinimapButton() }, hideFriendsButton = { setupFriendsButton(FriendsFrame) } }
+	if SocialUIFrame and ns.FriendsHost() == SocialUIFrame then
+		tinsert(buttons.hideFriendsButton, setupFriendsButton(SocialUIFrame))
+	end
+	local bindClassicWindow = setupClassicWindow()
 	function ns.OnSet(key, value)
+		if key == "classicWindow" and bindClassicWindow then
+			bindClassicWindow()
+			print("|cff00ccffHideBattleNetFriends|r: " .. L.classicWindowNext)
+		end
 		if buttons[key] then
-			buttons[key]:SetShown(not value)
+			for _, button in pairs(buttons[key]) do
+				button:SetShown(not value)
+			end
 			if value then
 				print("|cff00ccffHideBattleNetFriends|r: " .. L.buttonsHint)
 			end

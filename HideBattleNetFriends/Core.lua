@@ -15,6 +15,7 @@ ns.defaults = {
 	hideRecentAlliesTab = false,
 	hideMinimapButton = false,
 	hideFriendsButton = false,
+	classicWindow = false,
 	hideOffline = false,
 	hideAppOnly = false,
 	hideOtherGames = false,
@@ -90,12 +91,25 @@ local function bnetFilteredOut(index)
 	return client ~= BNET_CLIENT_WOW and active("hideOtherGames")
 end
 
+-- Forever's in-game friends are Title friends of the Battle.net list (no BattleTag, a character name)
+local function isTitleFriend(info)
+	return info and Enum.BattleNetFriendLevel and info.friendLevel == Enum.BattleNetFriendLevel.Title
+end
+
 local function filteredOut(element)
 	if element.buttonType == FRIENDS_BUTTON_TYPE_WOW then
 		local info = C_FriendList.GetFriendInfoByIndex(element.id)
 		return info and not info.connected and active("hideWowOffline")
 	end
-	return element.buttonType == FRIENDS_BUTTON_TYPE_BNET and bnetFilteredOut(element.id)
+	if element.buttonType ~= FRIENDS_BUTTON_TYPE_BNET then
+		return false
+	end
+	local info = C_BattleNet.GetFriendAccountInfo(element.id)
+	if isTitleFriend(info) then
+		return not info.gameAccountInfo.isOnline and active("hideWowOffline")
+	end
+	-- where BNGetNumFriends is left alone (Forever), Battle.net friends are dropped here instead
+	return active("hideFriends") or bnetFilteredOut(element.id)
 end
 
 -- Forever (and later clients) replace FriendsFrame with the Social UI window
@@ -105,7 +119,11 @@ end
 
 local socialOverlay
 
+-- the window the friends list is in: the old FriendsFrame when something opened it (it never shows otherwise on Forever)
 function ns.FriendsHost()
+	if FriendsFrame:IsShown() then
+		return FriendsFrame
+	end
 	return socialUI() or FriendsFrame
 end
 
@@ -115,7 +133,7 @@ function ns.CanFilter()
 end
 
 local function filtering()
-	return active("hideOffline") or active("hideAppOnly") or active("hideOtherGames") or active("hideWowOffline")
+	return active("hideFriends") or active("hideOffline") or active("hideAppOnly") or active("hideOtherGames") or active("hideWowOffline")
 end
 
 -- returns the entries left after filtering, without the dividers they orphan, or nil when nothing was filtered
@@ -447,11 +465,8 @@ local function setupSocialUI(frame)
 	if FriendsListSocialCardMixin then
 		-- cards copy the mixin when first created, which happens after login
 		-- in-game (Title) friends show their character name, not a real name
-		local function isTitle(info)
-			return info and Enum.BattleNetFriendLevel and info.friendLevel == Enum.BattleNetFriendLevel.Title
-		end
 		hooksecurefunc(FriendsListSocialCardMixin, "RefreshFriendNameDisplayText", function(card)
-			if active("anonymize") and not isTitle(card.elementData.accountInfo) then
+			if active("anonymize") and not isTitleFriend(card.elementData.accountInfo) then
 				maskName(card.FriendName, card.elementData.accountInfo)
 			end
 		end)
@@ -460,7 +475,7 @@ local function setupSocialUI(frame)
 			local info = card.elementData.accountInfo
 			local name = tooltip:GetName()
 			if info and name then
-				if active("anonymize") and not isTitle(info) then
+				if active("anonymize") and not isTitleFriend(info) then
 					maskName(_G[name .. "TextLeft1"], info)
 				end
 				-- shortcut: the emptied note/broadcast lines keep their height, a small gap is left
@@ -490,10 +505,6 @@ local function setupSocialUI(frame)
 	frame:HookScript("OnHide", function()
 		revealed = false
 	end)
-end
-
-local function isTitleFriend(info)
-	return Enum.BattleNetFriendLevel and info.friendLevel == Enum.BattleNetFriendLevel.Title
 end
 
 -- Forever's in-game friends are Title friends of the Battle.net list; "Hide Battle.net friends" keeps them, like WoW friends elsewhere
@@ -613,9 +624,8 @@ local function onLogin()
 		end)
 	end
 
-	if socialUI() then
-		-- the old FriendsFrame still loads but is never shown
-	elseif FriendsList_Update and FriendsListFrame and FriendsListFrame.ScrollBox then
+	-- on Forever the old FriendsFrame still loads, and addons such as ClassicUI Forever open it instead of the Social UI
+	if FriendsList_Update and FriendsListFrame and FriendsListFrame.ScrollBox then
 		-- Blizzard rebuilds the whole list each update; drop filtered friends and the dividers they leave behind
 		hooksecurefunc("FriendsList_Update", filterFriendsList)
 	elseif FriendsList_Update and FriendsFrameFriendsScrollFrame then
@@ -626,7 +636,7 @@ local function onLogin()
 		hooksecurefunc("FriendsFrame_UpdateFriendButton", function(button)
 			if button.buttonType ~= FRIENDS_BUTTON_TYPE_BNET or not active("anonymize") or not button.name then return end
 			local info = C_BattleNet.GetFriendAccountInfo(button.id)
-			if info then
+			if info and not isTitleFriend(info) then
 				button.name:SetText(friendLabel(info))
 			end
 		end)
@@ -635,8 +645,9 @@ local function onLogin()
 	if FriendsListButtonMixin and FriendsTooltip then
 		-- list buttons copy the mixin when first created, which happens after login
 		hooksecurefunc(FriendsListButtonMixin, "OnEnter", function(button)
-			if active("anonymize") and button.buttonType == FRIENDS_BUTTON_TYPE_BNET then
-				FriendsTooltipHeader:SetText(shortTag(C_BattleNet.GetFriendAccountInfo(button.id)))
+			local info = button.buttonType == FRIENDS_BUTTON_TYPE_BNET and C_BattleNet.GetFriendAccountInfo(button.id)
+			if active("anonymize") and info and not isTitleFriend(info) then
+				FriendsTooltipHeader:SetText(shortTag(info))
 			end
 			if active("hideNotes") and FriendsTooltipNoteText:IsShown() then
 				FriendsTooltip:SetHeight(FriendsTooltip:GetHeight() - FriendsTooltipNoteText:GetHeight())

@@ -51,6 +51,7 @@ Pick a starting point, then fine-tune any option by hand.
 - Hide Quick Join pop-ups
 
 **Display**
+- Use the classic friends window (Forever): the friends key opens the old friends window instead of the new social window
 - Hide the minimap button
 - Hide the friends list button, for a minimal friends list
 
@@ -67,6 +68,8 @@ Forever has a new social window, and Blizzard blocks any addon that changes its 
 - **Hide offline WoW friends** applies to those in-game friends.
 - Blizzard's search and Filter button still work on the filtered list.
 - Hiding friend requests and tabs is not available there: it would mean changing Blizzard's window.
+- **Use the classic friends window** makes the friends key open the old friends window instead. The social button and Blizzard's tab shortcuts still open the new one.
+- For a fuller classic look (who list, guild roster, combat-safe opening), [ClassicUI Forever](https://www.curseforge.com/wow/addons/classicui-forever) brings back the old window too: the filters and profiles work there, and the HideBattleNetFriends button sits next to its lock button. The option above is hidden while it is installed.
 
 ### Where real names are replaced
 
@@ -79,6 +82,8 @@ With *BattleTags instead of real names*, the BattleTag (without its #number) rep
 - Battle.net pop-up notifications
 - the right-click menu on a Battle.net friend
 - the block, remove and note confirmation dialogs
+
+On Forever, in-game friends have no BattleTag and keep their character name.
 
 ## Commands
 
@@ -112,7 +117,7 @@ Hiding the minimap or friends list button is safe: `/hbnf` always opens the wind
 | Classic (Mists of Pandaria) | Yes |
 | Classic Era | Yes |
 | Anniversary Edition | Yes |
-| Forever | Yes |
+| Forever | Yes (see [WoW Forever](#wow-forever)) |
 
 Available in English, French, German, Spanish, Italian, Portuguese, Russian, Korean and Chinese (simplified and traditional).
 
@@ -128,6 +133,7 @@ Install via [CurseForge](https://www.curseforge.com/wow/addons/hidebattlenetfrie
 2. Extract the `HideBattleNetFriends` folder into your WoW addons directory:
    - **Windows:** `C:\Program Files (x86)\World of Warcraft\_retail_\Interface\AddOns\`
    - **macOS:** `/Applications/World of Warcraft/_retail_/Interface/AddOns/`
+   - For other versions, replace `_retail_` with `_classic_`, `_classic_era_`, `_anniversary_` or `_forever_`.
 3. Restart WoW or type `/reload` in-game.
 
 ### Manual
