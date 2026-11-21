@@ -284,6 +284,10 @@ local function applyToastCVars()
 			end
 		end
 	end
+	-- the toast frame reads these CVars only at VARIABLES_LOADED, so sync its events now
+	if BNToastFrame and BNToastFrame.SetToastsEnabled then
+		BNToastFrame:SetToastsEnabled(GetCVarBool("showToastWindow"))
+	end
 end
 
 function ns.Refresh()
@@ -386,6 +390,10 @@ local function setupNameLeaks()
 
 	if BNToastFrame and BNToastFrame.ShowToast then
 		local function maskToast(toast)
+			if db.muteToasts then
+				toast:Hide()
+				return
+			end
 			if not enabled("anonymize") then return end
 			local info = accountByID(toast.toastData)
 			maskName(toast.TopLine, info)
